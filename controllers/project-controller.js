@@ -8,15 +8,28 @@ const getProjects = (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const isArchived = req.query.archived === "true";
+  const sortBy = req.query.sortBy || "project_title";
+  const sortOrder = req.query.sortOrder || "desc"; // desc & asc
+  const searchQuery = req.query.search || "";
+  const searchField = req.query.searchField || "project_title"; 
 
-  ///projects?page=1&limit=10&archived=true
+  //example: GET /projects?page=1&limit=10&archived=true&sortBy=project_title&sortOrder=asc&search=mysearch&searchField=description
+
 
   const query = {};
   if (typeof isArchived === "boolean") {
     query.is_archived = isArchived;
   }
 
+  const sortOptions = {};
+  sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+
+  if (searchQuery && searchField) {
+    query[searchField] = { $regex: searchQuery, $options: "i" };
+  }
+
   Project.find(query)
+    .sort(sortOptions)
     .skip((page - 1) * limit)
     .limit(limit)
     .then((projects) => {
@@ -37,6 +50,22 @@ const getProject = (req, res) => {
     })
     .catch((e) => handleError(res, e));
 }
+
+const getFullProject = (req, res) => {
+  Project.findById(req.params.id)
+    .populate("list_of_defects")
+    .populate("list_of_users_with_access")
+    .then((project) => {
+      res
+        .status(200) //OK
+        .json(project);
+    })
+    /*.catch((e) => handleError(res, e));*/
+    .catch((e) => {
+      // Обработка ошибки
+      res.status(500).json({ error: e.message });
+    });
+};
 
 const deleteProject = (req, res) => {
   Project
@@ -76,6 +105,7 @@ const updateProject = (req, res) => {
 module.exports = {
   getProjects,
   getProject,
+  getFullProject,
   addProject,
   deleteProject,
   updateProject,
