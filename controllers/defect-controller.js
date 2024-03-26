@@ -1,4 +1,5 @@
 const { Defect } = require("../models/defect");
+const { Project } = require("../models/project");
 
 const handleError = (res, error) => {
   res.status(500).json({ error });
@@ -41,30 +42,67 @@ const getDefect = (req, res) => {
 };
 
 const deleteDefect = (req, res) => {
-  Defect.findByIdAndDelete(req.params.id)
+  Defect
+    .findByIdAndDelete(req.params.id)
     .then((defect) => {
-      res.status(200).json(defect);
+      return Project.findOneAndUpdate(
+        { list_of_defects: req.params.id },
+        { $pull: { list_of_defects: req.params.id } },
+        { new: true }
+      );
     })
-    .catch((e) => handleError(res, e));
+    .then((project) => {
+      res.status(200).json({ message: "Defect deleted successfully", project });
+    })
+    .catch((error) => {
+      res.status(500).json({ error: error.message });
+    });
 };
 
 const addDefect = (req, res) => {
-  const defect = new Defect(req.body);
+  const { projectId, ...defectData } = req.body;
+  const defect = new Defect({
+    ...defectData,
+    project: projectId,
+  });
 
   defect
     .save()
-    .then((result) => {
-      res.status(201).json(result);
+    .then((savedDefect) => {
+      return Project.findByIdAndUpdate(
+        projectId,
+        { $push: { list_of_defects: savedDefect._id } },
+        { new: true }
+      ).then((updatedProject) => {
+        res
+          .status(201)
+          .json({
+            message: "Defect created successfully",
+            defect: savedDefect,
+            project: updatedProject,
+          });
+      });
     })
-    .catch((e) => handleError(res, e));
+    .catch((error) => {
+      res.status(500).json({ error: error.message });
+    });
 };
 
+
 const updateDefect = (req, res) => {
-  Defect.findByIdAndUpdate(req.params.id, req.body)
-    .then((result) => {
-      res.status(200).json(result);
+  Defect
+    .findByIdAndUpdate(req.params.id, req.body, { new: true })
+    .then((updatedDefect) => {
+      res
+        .status(200)
+        .json({
+          message: "Defect updated successfully",
+          defect: updatedDefect,
+        });
     })
-    .catch((e) => handleError(res, e));
+    .catch((error) => {
+      res.status(500).json({ error: error.message });
+    });
 };
 
 module.exports = {
