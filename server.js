@@ -1,15 +1,19 @@
 const express = require('express');
 const mongoose = require("mongoose");
+const cors = require("cors");
 const projectRouter = require('./routes/project-routes');
 const defectRouter = require('./routes/defect-routes');
+const userRouter = require('./routes/user-routes');
 
 const PORT = 5555;
 const URL_TO_DB = "mongodb://127.0.0.1:27017/graduation_project_db";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(projectRouter);
 app.use(defectRouter);
+app.use(userRouter);
 
 mongoose
   .connect(URL_TO_DB)

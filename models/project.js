@@ -20,9 +20,10 @@ const projectSchema = new mongoose.Schema({
     default: "Description of the project",
   },
   list_of_users_with_access: [
-    { 
+    {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
+      ref: "User",
+      required: false
     },
   ],
   list_of_defects: [

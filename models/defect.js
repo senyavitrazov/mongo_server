@@ -23,7 +23,7 @@ const stateSchema = new mongoose.Schema({
   type_of_state: {
     type: String,
     enum: ["open", "in_progress", "fixed"],
-    required: true,
+    default: "open",
   },
 });
 

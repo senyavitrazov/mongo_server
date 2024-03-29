@@ -1,9 +1,9 @@
 const { Defect } = require("../models/defect");
 const { Project } = require("../models/project");
 
-const handleError = (res, error) => {
-  res.status(500).json({ error });
-};
+  const handleError = (res, error) => {
+    res.status(500).json({ error });
+  };
 
 const getDefects = (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -27,9 +27,17 @@ const getDefects = (req, res) => {
     .limit(limit)
     .populate("project", "project_title")
     .then((defects) => {
-      res.status(200).json(defects);
+      Defect.estimatedDocumentCount(query)
+        .then((count) => {
+          res.status(200).json({ count, defects });
+        })
+        .catch((e) => {
+          handleError(res, e);
+        });
     })
-    .catch((e) => handleError(res, e));
+    .catch((e) => {
+      handleError(res, e);
+    });
 };
 
 const getDefect = (req, res) => {

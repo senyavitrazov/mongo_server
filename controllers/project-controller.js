@@ -33,9 +33,11 @@ const getProjects = (req, res) => {
     .skip((page - 1) * limit)
     .limit(limit)
     .then((projects) => {
-      res
-        .status(200) //OK
-        .json(projects);
+      Project.estimatedDocumentCount(query)
+        .then((count) => {
+          res.status(200).json({ count, projects });
+        })
+        .catch((e) => handleError(res, e));
     })
     .catch((e) => handleError(res, e));
 }
@@ -60,11 +62,7 @@ const getFullProject = (req, res) => {
         .status(200) //OK
         .json(project);
     })
-    /*.catch((e) => handleError(res, e));*/
-    .catch((e) => {
-      // Обработка ошибки
-      res.status(500).json({ error: e.message });
-    });
+    .catch((e) => handleError(res, e));
 };
 
 const deleteProject = (req, res) => {
