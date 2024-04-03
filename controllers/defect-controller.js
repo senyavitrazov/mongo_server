@@ -1,43 +1,76 @@
 const { Defect } = require("../models/defect");
 const { Project } = require("../models/project");
 
-  const handleError = (res, error) => {
-    res.status(500).json({ error });
-  };
+const handleError = (res, error) => {
+  res.status(500).json({ error });
+};
 
-const getDefects = (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const sortBy = req.query.sortBy || "severity";
-  const sortOrder = req.query.sortOrder || "asc"; // desc & asc
-  const searchQuery = req.query.search || "";
-  const searchField = req.query.searchField || "defect_title";
+const getDefects = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "_id",
+      sortOrder = "asc",
+      search = "",
+    } = req.query;
+    const query = await buildSearchQuery(search);
+    const sortOptions = buildSortOptions(sortBy, sortOrder);
+    const defects = await executeDefectSearch(
+      query,
+      sortOptions,
+      parseInt(page),
+      parseInt(limit)
+    );
+    const count = await Defect.countDocuments(query);
+    res.status(200).json({ count, defects });
+  } catch (error) {
+    console.error("Error occurred while searching defects:", error);
+    res.status(500).json({ error: "Error occurred while searching defects" });
+  }
+};
 
-  const query = {};
+const executeDefectSearch = async (query, sortOptions, page, limit) => {
+  try {
+    const defects = await Defect.find(query)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("project", "project_title");
+    return defects;
+  } catch (error) {
+    console.error("Error occurred while executing defect search:", error);
+    throw error;
+  }
+};
+
+const buildSearchQuery = async (search) => {
+  try {
+    const searchRegex = search ? new RegExp(search, "i") : null;
+    if (!searchRegex) return {};
+
+    const projects = await Project.find({ project_title: searchRegex });
+    const projectIds = projects.map((project) => project._id);
+
+    return {
+      $or: [
+        { defect_title: searchRegex },
+        { severity: searchRegex },
+        { priority: searchRegex },
+        { description: searchRegex },
+        { project: { $in: projectIds } },
+      ],
+    };
+  } catch (error) {
+    console.error("Error occurred while building search query:", error);
+    throw error;
+  }
+};
+
+const buildSortOptions = (sortBy, sortOrder) => {
   const sortOptions = {};
   sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
-
-  if (searchQuery && searchField) {
-    query[searchField] = { $regex: searchQuery, $options: "i" };
-  }
-
-  Defect.find(query)
-    .sort(sortOptions)
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .populate("project", "project_title")
-    .then((defects) => {
-      Defect.estimatedDocumentCount(query)
-        .then((count) => {
-          res.status(200).json({ count, defects });
-        })
-        .catch((e) => {
-          handleError(res, e);
-        });
-    })
-    .catch((e) => {
-      handleError(res, e);
-    });
+  return sortOptions;
 };
 
 const getDefect = (req, res) => {

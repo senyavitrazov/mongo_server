@@ -28,14 +28,17 @@ const stateSchema = new mongoose.Schema({
 });
 
 const defectSchema = new mongoose.Schema({
-  current_state: stateSchema,
+  current_state: {
+    type: stateSchema,
+    default: () => ({ type_of_state: "open" }),
+  },
   defect_title: {
-    type: String, 
+    type: String,
     required: true,
   },
   project: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Project'
+    ref: "Project",
   },
   severity: {
     type: String,
