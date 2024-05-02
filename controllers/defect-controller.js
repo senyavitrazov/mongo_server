@@ -13,8 +13,10 @@ const getDefects = async (req, res) => {
       sortBy = "_id",
       sortOrder = "asc",
       search = "",
+      priority = "",
+      severity = "",
     } = req.query;
-    const query = await buildSearchQuery(search);
+    const query = await buildSearchQuery(search, priority, severity);
     const sortOptions = buildSortOptions(sortBy, sortOrder);
     const defects = await executeDefectSearch(
       query,
@@ -44,23 +46,61 @@ const executeDefectSearch = async (query, sortOptions, page, limit) => {
   }
 };
 
-const buildSearchQuery = async (search) => {
+const buildSearchQuery = async (search, priority, severity) => {
   try {
     const searchRegex = search ? new RegExp(search, "i") : null;
-    if (!searchRegex) return {};
+    const priorityRegex = priority ? new RegExp(priority, "i") : null;
+    const severityRegex = severity ? new RegExp(severity, "i") : null;
+    
+    if (searchRegex) {
+      const projects = await Project.find({ project_title: searchRegex });
+      const projectIds = projects.map((project) => project._id);
 
-    const projects = await Project.find({ project_title: searchRegex });
-    const projectIds = projects.map((project) => project._id);
+      const query = {
+        $or: [
+          { defect_title: searchRegex },
+          { severity: searchRegex },
+          { priority: searchRegex },
+          { description: searchRegex },
+        ],
+        };
 
-    return {
-      $or: [
-        { defect_title: searchRegex },
-        { severity: searchRegex },
-        { priority: searchRegex },
-        { description: searchRegex },
-        { project: { $in: projectIds } },
-      ],
-    };
+      if (projectIds.length > 0) {
+        query.$or.push({ project: { $in: projectIds } });
+      }
+
+      if (priorityRegex || severityRegex) {
+        query.$and = [];
+        if (priorityRegex) {
+          query.$and.push({ priority: priorityRegex });
+        }
+        if (severityRegex) {
+          query.$and.push({ severity: severityRegex });
+        }
+      }
+
+      return query;
+    } else {
+      if (!priorityRegex && !severityRegex) {
+        return {};
+      } else if (!priorityRegex) {
+        return {
+          $or: [
+            { severity: severityRegex },
+            { priority: priorityRegex },
+            { description: searchRegex },
+          ],
+        };
+      } else if (!severityRegex) {
+        return {
+          $or: [{ priority: priorityRegex }, { description: searchRegex }],
+        };
+      } else {
+        return {
+          $and: [{ severity: severityRegex }, { priority: priorityRegex }],
+        };
+      }
+    }
   } catch (error) {
     console.error("Error occurred while building search query:", error);
     throw error;
@@ -101,11 +141,18 @@ const deleteDefect = (req, res) => {
 };
 
 const addDefect = (req, res) => {
-  const { projectId, ...defectData } = req.body;
+  const { projectId, current_state, ...defectData } = req.body;
+  const currentState = current_state 
+    ? current_state 
+    : { type_of_state: "open", date: Date.now() };
   const defect = new Defect({
     ...defectData,
     project: projectId,
   });
+
+  if (defect.logs.list_of_states.length === 0) {
+    defect.logs.list_of_states.push(currentState);
+  }
 
   defect
     .save()

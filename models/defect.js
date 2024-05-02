@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
 
 const commentSchema = new mongoose.Schema({
-  commenter_name: {
-    type: String,
-    default: "Anonymous",
+  commenter: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: false,
   },
   text_of_comment: {
     type: String,
@@ -20,7 +21,7 @@ const stateSchema = new mongoose.Schema({
     type: String,
     default: Date(Date.now()),
   },
-  type_of_state: {
+  type_of_state : {
     type: String,
     enum: ["open", "in_progress", "fixed"],
     default: "open",
@@ -30,7 +31,7 @@ const stateSchema = new mongoose.Schema({
 const defectSchema = new mongoose.Schema({
   current_state: {
     type: stateSchema,
-    default: () => ({ type_of_state: "open" }),
+    default: () => ({ type_of_state: "open", date: Date(Date.now())}),
   },
   defect_title: {
     type: String,

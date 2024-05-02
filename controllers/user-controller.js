@@ -29,23 +29,26 @@ const getUser = (req, res) => {
     });
 };
 
-const addUser = (req, res) => {
-  const { credentials, role, local_id } = req.body;
-  const newUser = new User({
-    credentials: credentials,
-    role: role || false,
-    local_id,
-  });
-
-  newUser
-    .save()
-    .then((user) => {
-      res.status(201).json(user);
-    })
-    .catch((error) => {
-      handleError(res, error);
-    });
+const addUser = async (req, res) => {
+  try {
+    const usersData = Array.isArray(req.body) ? req.body : [req.body];
+    const savedUsers = [];
+    for (const userData of usersData) {
+      const { credentials, role, local_id } = userData;
+      const newUser = new User({
+        credentials: credentials,
+        role: role || false,
+        local_id,
+      });
+      const savedUser = await newUser.save();
+      savedUsers.push(savedUser);
+    }
+    res.status(201).json(savedUsers);
+  } catch (error) {
+    handleError(res, error);
+  }
 };
+
 
 const updateUser = (req, res) => {
   const userId = req.params.id;
