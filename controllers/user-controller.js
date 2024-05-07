@@ -4,14 +4,24 @@ const handleError = (res, error) => {
   res.status(500).json({ error: error.message });
 };
 
-const getUsers = (req, res) => {
-  User.find()
-    .then((users) => {
-      res.status(200).json(users);
-    })
-    .catch((error) => {
-      handleError(res, error);
-    });
+const getUsers = async (req, res) => {
+  const { login, limit } = req.query;
+  let query = {};
+
+  if (login) {
+    query = { "credentials.login": new RegExp(login, "i") };
+  }
+
+  try {
+    let userQuery = User.find(query);
+    if (limit && !isNaN(limit)) {
+      userQuery = userQuery.limit(parseInt(limit, 10));
+    }
+    const users = await userQuery;
+    res.status(200).json(users);
+  } catch (error) {
+    handleError(res, error);
+  }
 };
 
 const getUser = (req, res) => {

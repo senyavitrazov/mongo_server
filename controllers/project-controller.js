@@ -4,47 +4,57 @@ const handleError = (res, error) => {
   res.status(500).json({ error });
 };
 
-const getProjects = (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const isArchived = req.query.archived === "true";
-  const sortBy = req.query.sortBy || "project_title";
-  const sortOrder = req.query.sortOrder || "desc"; // desc & asc
-  const searchQuery = req.query.search || "";
-  const searchField = req.query.searchField || "project_title"; 
+const getProjects = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const isArchived = req.query.archived === "true";
+    const sortBy = req.query.sortBy || "project_title";
+    const sortOrder = req.query.sortOrder || "desc"; // desc & asc
+    const searchQuery = req.query.search || "";
+    const searchField = req.query.searchField || "project_title"; 
 
-  //example: GET /projects?page=1&limit=10&archived=true&sortBy=project_title&sortOrder=asc&search=mysearch&searchField=description
+    //example: GET /projects?page=1&limit=10&archived=true&sortBy=project_title&sortOrder=asc&search=mysearch&searchField=description
 
 
-  const query = {};
-  if (typeof isArchived === "boolean") {
-    query.is_archived = isArchived;
+    const query = {};
+    if (typeof isArchived === "boolean") {
+      query.is_archived = isArchived;
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+
+    if (searchQuery && searchField) {
+      query[searchField] = { $regex: searchQuery, $options: "i" };
+    }
+
+    const projects = await Project.find(query)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("list_of_users_with_access")
+      .populate("list_of_defects", "current_state.type_of_state");
+      /*
+      .then((projects) => {
+        Project.estimatedDocumentCount(query)
+          .then((count) => {
+            res.status(200).json({ count, projects });
+          })
+          .catch((e) => handleError(res, e));
+      })
+      .catch((e) => handleError(res, e));*/
+    const count = await Project.countDocuments(query);
+    res.status(200).json({ count, projects });
+  } catch (error) {
+    console.error("Error occurred while fetching projects:", error);
+    res.status(500).json({ error: "Error occurred while fetching projects" });
   }
-
-  const sortOptions = {};
-  sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
-
-  if (searchQuery && searchField) {
-    query[searchField] = { $regex: searchQuery, $options: "i" };
-  }
-
-  Project.find(query)
-    .sort(sortOptions)
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .then((projects) => {
-      Project.estimatedDocumentCount(query)
-        .then((count) => {
-          res.status(200).json({ count, projects });
-        })
-        .catch((e) => handleError(res, e));
-    })
-    .catch((e) => handleError(res, e));
 }
 
 const getProject = (req, res) => {
-  Project
-    .findById(req.params.id)
+  Project.findById(req.params.id)
+    .populate("list_of_users_with_access")
     .then((project) => {
       res
         .status(200) //OK

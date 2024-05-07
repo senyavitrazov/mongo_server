@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { formatDate } = require("./func/formatDate"); 
 
 const commentSchema = new mongoose.Schema({
   commenter: {
@@ -12,16 +13,16 @@ const commentSchema = new mongoose.Schema({
   },
   date: {
     type: String,
-    default: Date(Date.now()),
+    default: formatDate(Date.now()),
   },
 });
 
 const stateSchema = new mongoose.Schema({
   date: {
     type: String,
-    default: Date(Date.now()),
+    default: formatDate(Date.now()),
   },
-  type_of_state : {
+  type_of_state: {
     type: String,
     enum: ["open", "in_progress", "fixed"],
     default: "open",
@@ -31,7 +32,7 @@ const stateSchema = new mongoose.Schema({
 const defectSchema = new mongoose.Schema({
   current_state: {
     type: stateSchema,
-    default: () => ({ type_of_state: "open", date: Date(Date.now())}),
+    default: () => ({ type_of_state: "open", date: formatDate(Date.now())}),
   },
   defect_title: {
     type: String,

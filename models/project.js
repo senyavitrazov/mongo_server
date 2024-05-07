@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { User } = require("./user");
 const { Defect } = require("./defect");
+const { formatDate } = require ("./func/formatDate"); 
 
 const projectSchema = new mongoose.Schema({
   is_archived: {
@@ -13,7 +14,7 @@ const projectSchema = new mongoose.Schema({
   },
   date_of_creation: {
     type: String,
-    default: Date(Date.now()),
+    default: formatDate(Date.now()),
   },
   description: {
     type: String,
@@ -23,7 +24,7 @@ const projectSchema = new mongoose.Schema({
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false
+      required: false,
     },
   ],
   list_of_defects: [
