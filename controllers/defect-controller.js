@@ -132,8 +132,8 @@ const deleteDefect = (req, res) => {
         { new: true }
       );
     })
-    .then((project) => {
-      res.status(200).json({ message: "Defect deleted successfully", project });
+    .then((defect) => {
+      res.status(200).json({ message: "Defect deleted successfully", defect });
     })
     .catch((error) => {
       res.status(500).json({ error: error.message });
@@ -141,13 +141,13 @@ const deleteDefect = (req, res) => {
 };
 
 const addDefect = (req, res) => {
-  const { projectId, current_state, ...defectData } = req.body;
-  const currentState = current_state 
-    ? current_state 
-    : { type_of_state: "open", date: Date.now() };
+  const { project, current_state, ...defectData } = req.body;
+  const currentState = current_state
+    ? current_state
+    : { type_of_state: "open" };
   const defect = new Defect({
     ...defectData,
-    project: projectId,
+    project,
   });
 
   if (defect.logs.list_of_states.length === 0) {
@@ -158,7 +158,7 @@ const addDefect = (req, res) => {
     .save()
     .then((savedDefect) => {
       return Project.findByIdAndUpdate(
-        projectId,
+        project,
         { $push: { list_of_defects: savedDefect._id } },
         { new: true }
       ).then((updatedProject) => {
@@ -172,7 +172,10 @@ const addDefect = (req, res) => {
       });
     })
     .catch((error) => {
-      res.status(500).json({ error: error.message });
+      console.error("Error while saving defect:", error);
+      res
+        .status(500)
+        .json({ error: error.message, problem: "Failed to save defect" });
     });
 };
 
