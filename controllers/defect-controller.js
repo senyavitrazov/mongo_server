@@ -1,5 +1,6 @@
 const { Defect } = require("../models/defect");
 const { Project } = require("../models/project");
+const { formatDate } = require("../func/formatDate");
 
 const handleError = (res, error) => {
   res.status(500).json({ error });
@@ -116,6 +117,7 @@ const buildSortOptions = (sortBy, sortOrder) => {
 const getDefect = (req, res) => {
   Defect.findById(req.params.id)
     .populate("project", "project_title")
+    .populate("logs.list_of_comments")
     .then((defect) => {
       res.status(200).json(defect);
     })
@@ -144,7 +146,7 @@ const addDefect = (req, res) => {
   const { project, current_state, ...defectData } = req.body;
   const currentState = current_state
     ? current_state
-    : { type_of_state: "open" };
+    : { type_of_state: "open", date: formatDate(Date.now()) };
   const defect = new Defect({
     ...defectData,
     project,
@@ -181,6 +183,7 @@ const addDefect = (req, res) => {
 
 
 const updateDefect = (req, res) => {
+  
   Defect
     .findByIdAndUpdate(req.params.id, req.body, { new: true })
     .then((updatedDefect) => {

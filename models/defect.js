@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { formatDate } = require("./func/formatDate"); 
+const { formatDate } = require("../func/formatDate"); 
 
 const commentSchema = new mongoose.Schema({
   commenter: {
