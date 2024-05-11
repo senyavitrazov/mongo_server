@@ -117,7 +117,11 @@ const buildSortOptions = (sortBy, sortOrder) => {
 const getDefect = (req, res) => {
   Defect.findById(req.params.id)
     .populate("project", "project_title")
-    .populate("logs.list_of_comments")
+    .populate({
+      path: "logs.list_of_comments",
+      model: "User",
+      select: "commenter",
+    })
     .then((defect) => {
       res.status(200).json(defect);
     })
@@ -183,7 +187,6 @@ const addDefect = (req, res) => {
 
 
 const updateDefect = (req, res) => {
-  
   Defect
     .findByIdAndUpdate(req.params.id, req.body, { new: true })
     .then((updatedDefect) => {

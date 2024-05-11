@@ -65,7 +65,14 @@ const getProject = (req, res) => {
 
 const getFullProject = (req, res) => {
   Project.findById(req.params.id)
-    .populate("list_of_defects")
+    .populate({
+      path: "list_of_defects",
+      populate: {
+        path: "logs.list_of_comments.commenter",
+        model: "User",
+        select: "credentials",
+      },
+    })
     .populate("list_of_users_with_access")
     .then((project) => {
       res
