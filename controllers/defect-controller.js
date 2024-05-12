@@ -16,8 +16,9 @@ const getDefects = async (req, res) => {
       search = "",
       priority = "",
       severity = "",
+      archived = "false",
     } = req.query;
-    const query = await buildSearchQuery(search, priority, severity);
+    const query = await buildSearchQuery(search, priority, severity, archived);
     const sortOptions = buildSortOptions(sortBy, sortOrder);
     const defects = await executeDefectSearch(
       query,
@@ -47,24 +48,28 @@ const executeDefectSearch = async (query, sortOptions, page, limit) => {
   }
 };
 
-const buildSearchQuery = async (search, priority, severity) => {
+const buildSearchQuery = async (search, priority, severity, archived) => {
   try {
     const searchRegex = search ? new RegExp(search, "i") : null;
     const priorityRegex = priority ? new RegExp(priority, "i") : null;
     const severityRegex = severity ? new RegExp(severity, "i") : null;
-    
+
+    const query = {};
+
+    if (archived !== "true") {
+      query["current_state.type_of_state"] = { $ne: "archived" };
+    }
+
     if (searchRegex) {
       const projects = await Project.find({ project_title: searchRegex });
       const projectIds = projects.map((project) => project._id);
 
-      const query = {
-        $or: [
+      query.$or =  [
           { defect_title: searchRegex },
           { severity: searchRegex },
           { priority: searchRegex },
           { description: searchRegex },
-        ],
-        };
+      ];
 
       if (projectIds.length > 0) {
         query.$or.push({ project: { $in: projectIds } });
@@ -83,7 +88,7 @@ const buildSearchQuery = async (search, priority, severity) => {
       return query;
     } else {
       if (!priorityRegex && !severityRegex) {
-        return {};
+        return query;
       } else if (!priorityRegex) {
         return {
           $or: [
