@@ -13,7 +13,7 @@ const getProjects = async (req, res) => {
     const sortOrder = req.query.sortOrder || "desc"; // desc & asc
     const searchQuery = req.query.search || "";
     const searchField = req.query.searchField || "project_title"; 
-
+    const {role: is_admin, id} = req.user;
     //example: GET /projects?page=1&limit=10&archived=true&sortBy=project_title&sortOrder=asc&search=mysearch&searchField=description
 
 
@@ -29,21 +29,16 @@ const getProjects = async (req, res) => {
       query[searchField] = { $regex: searchQuery, $options: "i" };
     }
 
+    if (!is_admin) {
+       query["list_of_users_with_access"] = { $in: [id] };
+    }
+
     const projects = await Project.find(query)
       .sort(sortOptions)
       .skip((page - 1) * limit)
       .limit(limit)
       .populate("list_of_users_with_access")
       .populate("list_of_defects", "current_state.type_of_state");
-      /*
-      .then((projects) => {
-        Project.estimatedDocumentCount(query)
-          .then((count) => {
-            res.status(200).json({ count, projects });
-          })
-          .catch((e) => handleError(res, e));
-      })
-      .catch((e) => handleError(res, e));*/
     const count = await Project.countDocuments(query);
     res.status(200).json({ count, projects });
   } catch (error) {

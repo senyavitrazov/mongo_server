@@ -1,4 +1,5 @@
 const express = require("express");
+const authMiddleware = require("../middleware/auth-middleware");
 
 const {
   getDefects,
@@ -10,7 +11,7 @@ const {
 
 const router = express.Router();
 
-router.get("/defects", getDefects);
+router.get("/defects", authMiddleware, getDefects);
 router.get("/defects/:id", getDefect);
 router.delete("/defects/:id", deleteDefect);
 router.post("/defects", addDefect);

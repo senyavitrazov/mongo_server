@@ -1,4 +1,5 @@
 const express = require("express");
+const authMiddleware = require("../middleware/auth-middleware");
 
 const { 
   getProjects,
@@ -11,7 +12,8 @@ const {
 
 const router = express.Router();
 
-router.get("/projects", getProjects);
+
+router.get("/projects", authMiddleware, getProjects);
 router.get("/projects/:id", getProject);
 router.get("/projects/:id/details", getFullProject);
 router.delete("/projects/:id", deleteProject);

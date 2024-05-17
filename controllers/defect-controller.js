@@ -18,7 +18,10 @@ const getDefects = async (req, res) => {
       severity = "",
       archived = "false",
     } = req.query;
-    const query = await buildSearchQuery(search, priority, severity, archived);
+
+    const { role: is_admin, id } = req.user;
+
+    const query = await buildSearchQuery(search, priority, severity, archived, is_admin, id);
     const sortOptions = buildSortOptions(sortBy, sortOrder);
     const defects = await executeDefectSearch(
       query,
@@ -48,7 +51,7 @@ const executeDefectSearch = async (query, sortOptions, page, limit) => {
   }
 };
 
-const buildSearchQuery = async (search, priority, severity, archived) => {
+const buildSearchQuery = async (search, priority, severity, archived, is_admin, id) => {
   try {
     const searchRegex = search ? new RegExp(search, "i") : null;
     const priorityRegex = priority ? new RegExp(priority, "i") : null;
@@ -59,6 +62,18 @@ const buildSearchQuery = async (search, priority, severity, archived) => {
     if (archived !== "true") {
       query["current_state.type_of_state"] = { $ne: "archived" };
     }
+
+    if (!is_admin) {
+      const projectsWithAccess = await Project.find({
+        list_of_users_with_access: { $in: [id] },
+      });
+      const projectIds = projectsWithAccess.map((project) => project._id);
+      if (projectIds.length === 0) {
+        return { _id: { $exists: false } };
+      }
+      query["project"] = { $in: projectIds };
+    }
+
 
     if (searchRegex) {
       const projects = await Project.find({ project_title: searchRegex });
