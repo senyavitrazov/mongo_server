@@ -20,6 +20,6 @@ router.patch("/users/:id", updateUser);
 router.post("/registration", acountController.registration);
 router.post("/login", acountController.login);
 router.post("/logout", acountController.logout);
-router.post("/refresh", acountController.refresh);
+router.get("/refresh", acountController.refresh);
 
 module.exports = router;

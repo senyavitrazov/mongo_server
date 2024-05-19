@@ -51,7 +51,14 @@ const executeDefectSearch = async (query, sortOptions, page, limit) => {
   }
 };
 
-const buildSearchQuery = async (search, priority, severity, archived, is_admin, id) => {
+const buildSearchQuery = async (
+  search,
+  priority,
+  severity,
+  archived,
+  is_admin,
+  id
+) => {
   try {
     const searchRegex = search ? new RegExp(search, "i") : null;
     const priorityRegex = priority ? new RegExp(priority, "i") : null;
@@ -59,69 +66,56 @@ const buildSearchQuery = async (search, priority, severity, archived, is_admin, 
 
     const query = {};
 
+    // Add the archived condition
     if (archived !== "true") {
       query["current_state.type_of_state"] = { $ne: "archived" };
     }
 
+    // Handle non-admin user access restriction
     if (!is_admin) {
       const projectsWithAccess = await Project.find({
         list_of_users_with_access: { $in: [id] },
       });
       const projectIds = projectsWithAccess.map((project) => project._id);
       if (projectIds.length === 0) {
-        return { _id: { $exists: false } };
+        return { _id: { $exists: false } }; // Return an empty result query
       }
       query["project"] = { $in: projectIds };
     }
 
+    const andConditions = [];
 
+    // Add search conditions to the $or clause
     if (searchRegex) {
-      const projects = await Project.find({ project_title: searchRegex });
-      const projectIds = projects.map((project) => project._id);
-
-      query.$or =  [
-          { defect_title: searchRegex },
-          { severity: searchRegex },
-          { priority: searchRegex },
-          { description: searchRegex },
+      const orConditions = [
+        { defect_title: searchRegex },
+        { description: searchRegex },
       ];
 
+      const projects = await Project.find({ project_title: searchRegex });
+      const projectIds = projects.map((project) => project._id);
       if (projectIds.length > 0) {
-        query.$or.push({ project: { $in: projectIds } });
+        orConditions.push({ project: { $in: projectIds } });
       }
 
-      if (priorityRegex || severityRegex) {
-        query.$and = [];
-        if (priorityRegex) {
-          query.$and.push({ priority: priorityRegex });
-        }
-        if (severityRegex) {
-          query.$and.push({ severity: severityRegex });
-        }
-      }
-
-      return query;
-    } else {
-      if (!priorityRegex && !severityRegex) {
-        return query;
-      } else if (!priorityRegex) {
-        return {
-          $or: [
-            { severity: severityRegex },
-            { priority: priorityRegex },
-            { description: searchRegex },
-          ],
-        };
-      } else if (!severityRegex) {
-        return {
-          $or: [{ priority: priorityRegex }, { description: searchRegex }],
-        };
-      } else {
-        return {
-          $and: [{ severity: severityRegex }, { priority: priorityRegex }],
-        };
-      }
+      andConditions.push({ $or: orConditions });
     }
+
+    // Add priority and severity conditions directly to the $and clause
+    if (priorityRegex) {
+      andConditions.push({ priority: priorityRegex });
+    }
+
+    if (severityRegex) {
+      andConditions.push({ severity: severityRegex });
+    }
+
+    // Ensure all conditions are applied
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
+    }
+
+    return query;
   } catch (error) {
     console.error("Error occurred while building search query:", error);
     throw error;

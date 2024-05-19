@@ -11,6 +11,8 @@ class AcountController {
       res.cookie("refreshToken", userData.refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
+        sameSite: "none",
+        secure: true,
       });
       return res.json(userData);
     } catch (error) {
@@ -26,6 +28,8 @@ class AcountController {
       res.cookie("refreshToken", userData.refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
+        sameSite: "none",
+        secure: true,
       });
       return res.json(userData);
     } catch (e) {
@@ -37,7 +41,7 @@ class AcountController {
     try {
       const { refreshToken } = req.cookies;
       const token = await userService.logout(refreshToken);
-      res.clearCookie("refreshToken");
+      res.clearCookie("refreshToken", { secure: true, sameSite: "none" });
       return res.json(token);
     } catch (e) {
       next(e);
@@ -51,8 +55,8 @@ class AcountController {
       res.cookie("refreshToken", userData.refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: false,
-        sameSite: "none", //'none' if HTTPS
+        sameSite: "none",
+        secure: true,
       });
       return res.json(userData);
     } catch (e) {
